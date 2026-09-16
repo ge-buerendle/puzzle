@@ -375,6 +375,14 @@ footer.foot{ text-align:center; font-size:11px; color:var(--text-dim); padding:8
     var pw = cw+2*m, ph = ch+2*m;
     var snapThresh = Math.min(cw,ch)*0.28;
 
+    var appEl = $("app");
+    var availWidth = (appEl && appEl.clientWidth) ? appEl.clientWidth : 640;
+    var TARGET_MAX_PX = 760;
+    var kMax = TARGET_MAX_PX / IMG_W;
+    var kRaw = availWidth / (IMG_W + 2*m);
+    var k = Math.min(kRaw, kMax);
+    if(!isFinite(k) || k<=0) k = kMax;
+
     var H = []; for(var r=0;r<=rows;r++){ H.push(new Array(cols).fill(0)); }
     var V = []; for(var r2=0;r2<rows;r2++){ V.push(new Array(cols+1).fill(0)); }
     for(var r3=1;r3<rows;r3++){ for(var c3=0;c3<cols;c3++){ H[r3][c3] = Math.random()<0.5?-1:1; } }
@@ -383,12 +391,15 @@ footer.foot{ text-align:center; font-size:11px; color:var(--text-dim); padding:8
     var frameX = m, frameY = m;
     var scatterGap = ph*0.4;
     var scatterColW = cw*1.2, scatterRowH = ch*1.2;
-    var scatterCols = cols;
+    var colsFitByWidth = Math.max(1, Math.floor(availWidth / (scatterColW*k)));
+    var scatterCols = Math.max(cols, Math.min(colsFitByWidth, n));
     var scatterRows = Math.ceil(n/scatterCols);
     var trayTop = frameY + IMG_H + scatterGap;
     var trayHeight = scatterRows*scatterRowH + scatterRowH*0.5;
 
-    var worldW = IMG_W + 2*m;
+    var frameWorldW = IMG_W + 2*m;
+    var trayWorldW = scatterCols*scatterColW;
+    var worldW = Math.max(frameWorldW, trayWorldW);
     var worldH = trayTop + trayHeight + m;
 
     var pieces = [];
@@ -450,7 +461,7 @@ footer.foot{ text-align:center; font-size:11px; color:var(--text-dim); padding:8
       frameX:frameX, frameY:frameY, worldW:worldW, worldH:worldH, snapThresh:snapThresh,
       pieces:pieces, pieceGroup:pieceGroup, groupMembers:groupMembers, nextGroupId:n,
       moves:0, solved:false,
-      timerStart:null, timerId:null, zTop: 10+n, lastElapsed:0, scale:1
+      timerStart:null, timerId:null, zTop: 10+n, lastElapsed:0, scale:k, kMax:kMax
     };
 
     $("stat-level").textContent = diff + " Teile";
@@ -524,8 +535,8 @@ footer.foot{ text-align:center; font-size:11px; color:var(--text-dim); padding:8
     function apply(){
       var w = wrap.clientWidth;
       if(!w) return;
-      var k = w / G.worldW;
-      if(!isFinite(k) || k<=0) k = 1;
+      var k = Math.min(w / G.worldW, G.kMax);
+      if(!isFinite(k) || k<=0) k = G.kMax;
       if(Math.abs(k-G.scale) < 0.001 && wrap.style.height) return;
       G.scale = k;
       $("stage-world").style.transform = "scale("+k+")";
